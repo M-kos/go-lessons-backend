@@ -94,6 +94,8 @@ storing complete living addresses (country, city, street, zip code).
 ### Lesson 2
 
 - [Database normalization](https://en.wikipedia.org/wiki/Database_normalization)
+- [Pattern: Event sourcing](https://microservices.io/patterns/data/event-sourcing.html)
+- [Implementing event sourcing using a relational database](https://softwaremill.com/implementing-event-sourcing-using-a-relational-database/)
 
 #### Homework
 
