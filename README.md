@@ -93,4 +93,16 @@ storing complete living addresses (country, city, street, zip code).
 
 ### Lesson 2
 
-[//]: # (Coming soon)
+- [Database normalization](https://en.wikipedia.org/wiki/Database_normalization)
+
+#### Homework
+
+**Task 1: Implement missing OperationStore methods**
+
+- ListOperationsByUserID
+- GetUserBalance
+- CreateTransfer
+
+### Lesson 3
+
+[//]: # (Create job to calculate statistic. Show different ways to do that.)
