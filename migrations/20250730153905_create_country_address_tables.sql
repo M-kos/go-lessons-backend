@@ -32,32 +32,25 @@ CREATE TABLE IF NOT EXISTS addresses
 		REFERENCES cities ( id )
 );
 
-CREATE TABLE IF NOT EXISTS user_address
-(
-	id         BIGSERIAL,
-	user_id    BIGINT,
-	address_id BIGINT,
-
-	PRIMARY KEY ( id ),
-	FOREIGN KEY ( address_id )
-		REFERENCES addresses ( id ),
-	FOREIGN KEY ( user_id )
-		REFERENCES users ( id )
-);
-
 ALTER TABLE users
-	ADD COLUMN user_address_id BIGINT,
-	ADD CONSTRAINT fk_user_address_id
-		FOREIGN KEY ( user_address_id )
-			REFERENCES user_address ( id );
+	ADD COLUMN address_id BIGINT,
+	ADD CONSTRAINT fk_address_id
+		FOREIGN KEY ( address_id )
+			REFERENCES addresses ( id );
 
 
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS countries;
-DROP TABLE IF EXISTS cities;
+ALTER TABLE users
+	DROP CONSTRAINT fk_address_id;
+ALTER TABLE users
+	DROP COLUMN address_id;
+
 DROP TABLE IF EXISTS addresses;
-DROP TABLE IF EXISTS user_address;
+
+DROP TABLE IF EXISTS cities;
+
+DROP TABLE IF EXISTS countries;
 -- +goose StatementEnd

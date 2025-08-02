@@ -10,4 +10,4 @@ from users as u
 	     left join addresses as a on u.address_id = a.id
 	     left join cities as ct on a.city_id = ct.id
 	     left join countries as cn on ct.country_id = cn.id
-where u.email = $1
+where u.id = $1

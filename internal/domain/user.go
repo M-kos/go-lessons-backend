@@ -7,4 +7,8 @@ type User struct {
 	Email      string
 	FullName   string
 	CreateTime time.Time
+	Country    string
+	City       string
+	Street     string
+	Zip        string
 }

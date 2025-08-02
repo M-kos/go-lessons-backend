@@ -44,6 +44,10 @@ func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	user, err := c.userStore.Create(r.Context(), domain.User{
 		Email:    req.Email,
 		FullName: req.FullName,
+		Country:  req.Country,
+		City:     req.City,
+		Zip:      req.Zip,
+		Street:   req.Street,
 	})
 	if err != nil {
 		slog.Error("Create user", slog.String("error", err.Error()))
@@ -108,6 +112,10 @@ func (c *UserController) UserByEmail(w http.ResponseWriter, r *http.Request) {
 		Email:      user.Email,
 		FullName:   user.FullName,
 		CreateTime: user.CreateTime.String(),
+		Street:     user.Street,
+		Zip:        user.Zip,
+		Country:    user.Country,
+		City:       user.City,
 	})
 	if err != nil {
 		slog.Error("Write get user response", slog.String("error", err.Error()))
@@ -150,6 +158,10 @@ func (c *UserController) ListUserByEmail(w http.ResponseWriter, r *http.Request)
 			Email:      u.Email,
 			FullName:   u.FullName,
 			CreateTime: u.CreateTime.String(),
+			Street:     u.Street,
+			Zip:        u.Zip,
+			Country:    u.Country,
+			City:       u.City,
 		})
 	}
 
@@ -178,6 +190,10 @@ func (c *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		ID:       req.ID,
 		Email:    req.Email,
 		FullName: req.FullName,
+		Country:  req.Country,
+		City:     req.City,
+		Street:   req.Street,
+		Zip:      req.Zip,
 	})
 	if err != nil {
 		slog.Error("update user", slog.String("error", err.Error()))
