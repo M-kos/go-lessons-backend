@@ -2,10 +2,9 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	_ "embed"
 	"errors"
-	"github.com/jackc/pgx/v5"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/meetmorrowsolonmars/education-pet-project/internal/domain"
@@ -55,13 +54,13 @@ func (s *UserStore) Create(ctx context.Context, user domain.User) (domain.User, 
 			_ = tx.Rollback(ctx)
 			return
 		}
-		err = tx.Commit(ctx)
+		_ = tx.Commit(ctx)
 	}()
 
 	row := tx.QueryRow(ctx, getCountryByName, user.Country)
 	var countryId int
 	if err := row.Scan(&countryId); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			row = tx.QueryRow(ctx, createCountryQuery, user.Country)
 
 			if err := row.Scan(&countryId); err != nil {
@@ -75,7 +74,7 @@ func (s *UserStore) Create(ctx context.Context, user domain.User) (domain.User, 
 	row = tx.QueryRow(ctx, getCityByName, user.City, countryId)
 	var cityId int
 	if err := row.Scan(&cityId); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			row = tx.QueryRow(ctx, createCityQuery, user.City, countryId)
 
 			if err := row.Scan(&cityId); err != nil {
@@ -89,7 +88,7 @@ func (s *UserStore) Create(ctx context.Context, user domain.User) (domain.User, 
 	row = tx.QueryRow(ctx, getAddressByAddress, user.Street, user.Zip, cityId)
 	var addressId int
 	if err := row.Scan(&addressId); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			row = tx.QueryRow(ctx, createAddressQuery, user.Street, user.Zip, cityId)
 
 			if err := row.Scan(&countryId); err != nil {
@@ -155,13 +154,13 @@ func (s *UserStore) UpdateUser(ctx context.Context, user domain.User) error {
 			_ = tx.Rollback(ctx)
 			return
 		}
-		err = tx.Commit(ctx)
+		_ = tx.Commit(ctx)
 	}()
 
 	var countryId int
 	row := tx.QueryRow(ctx, getCountryByName, user.Country)
 	if err := row.Scan(&countryId); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			row = tx.QueryRow(ctx, createCountryQuery, user.Country)
 
 			if err := row.Scan(&countryId); err != nil {
@@ -175,7 +174,7 @@ func (s *UserStore) UpdateUser(ctx context.Context, user domain.User) error {
 	var cityId int
 	row = tx.QueryRow(ctx, getCityByName, user.City, countryId)
 	if err := row.Scan(&cityId); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			row = tx.QueryRow(ctx, createCityQuery, user.City, countryId)
 
 			if err := row.Scan(&cityId); err != nil {
@@ -189,7 +188,7 @@ func (s *UserStore) UpdateUser(ctx context.Context, user domain.User) error {
 	row = tx.QueryRow(ctx, getAddressByAddress, user.Street, user.Zip, cityId)
 	var addressId int
 	if err := row.Scan(&addressId); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			row = tx.QueryRow(ctx, createAddressQuery, user.Street, user.Zip, cityId)
 
 			if err := row.Scan(&countryId); err != nil {

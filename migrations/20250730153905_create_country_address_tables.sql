@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS cities
 (
 	id         BIGSERIAL,
 	name       VARCHAR NOT NULL,
-	country_id BIGINT,
+	country_id BIGINT  NOT NULL,
 
 	PRIMARY KEY ( id ),
 	FOREIGN KEY ( country_id )
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS addresses
 	id      BIGSERIAL,
 	street  VARCHAR NOT NULL,
 	zip     VARCHAR NOT NULL,
-	city_id BIGINT,
+	city_id BIGINT  NOT NULL,
 
 	PRIMARY KEY ( id ),
 	FOREIGN KEY ( city_id )
