@@ -22,3 +22,11 @@ const (
 	OperationTypeDebit  OperationType = "debit"
 	OperationTypeCredit OperationType = "credit"
 )
+
+type BalanceSnapshot struct {
+	ID             int64
+	UserID         int64
+	SequenceNumber int64
+	Balance        float64
+	UpdateTime     time.Time
+}
