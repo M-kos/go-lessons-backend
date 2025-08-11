@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/meetmorrowsolonmars/education-pet-project/internal/domain"
 )
@@ -13,6 +12,8 @@ import (
 type UserStore interface {
 	Create(ctx context.Context, user domain.User) (domain.User, error)
 	GetByEmail(ctx context.Context, email string) (domain.User, error)
+	ListUsersByEmail(ctx context.Context, emails []string) ([]domain.User, error)
+	UpdateUser(ctx context.Context, user domain.User) error
 }
 
 type UserController struct {
@@ -23,15 +24,6 @@ func NewUserController(userStore UserStore) *UserController {
 	return &UserController{
 		userStore: userStore,
 	}
-}
-
-type CreateUserRequest struct {
-	Email    string `json:"email"`
-	FullName string `json:"full_name"`
-}
-
-type CreateUserResponse struct {
-	ID int64 `json:"id"`
 }
 
 func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -52,6 +44,10 @@ func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	user, err := c.userStore.Create(r.Context(), domain.User{
 		Email:    req.Email,
 		FullName: req.FullName,
+		Country:  req.Country,
+		City:     req.City,
+		Zip:      req.Zip,
+		Street:   req.Street,
 	})
 	if err != nil {
 		slog.Error("Create user", slog.String("error", err.Error()))
@@ -74,27 +70,13 @@ func (c *UserController) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type User struct {
-	ID         int64     `json:"id"`
-	Email      string    `json:"email"`
-	FullName   string    `json:"full_name"`
-	CreateTime time.Time `json:"create_time"`
-}
-
-type GetByEmailResponse struct {
-	User
-}
-
-func (c *UserController) GetByEmail(w http.ResponseWriter, r *http.Request) {
+func (c *UserController) UserByEmail(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	req, err := DecodeRequest[GetUserByEmailRequest](r)
+	if err != nil {
+		slog.Error("Decode get user request", slog.String("error", err.Error()))
 
-	const pathKey = "email"
-
-	email := r.PathValue(pathKey)
-	if email == "" {
-		slog.Error("Get user by email", slog.String("error", "email is empty"))
-
-		err := WriteErrorResponse(w, http.StatusBadRequest, "Email is required")
+		err = WriteErrorResponse(w, http.StatusBadRequest, "Invalid request body: %s", err)
 		if err != nil {
 			slog.Error("Write error response", slog.String("error", err.Error()))
 		}
@@ -102,11 +84,20 @@ func (c *UserController) GetByEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := c.userStore.GetByEmail(r.Context(), email)
+	if req.Email == "" {
+		err := WriteErrorResponse(w, http.StatusBadRequest, "Invalid email")
+		if err != nil {
+			slog.Error("Write error response", slog.String("error", err.Error()))
+		}
+
+		return
+	}
+
+	user, err := c.userStore.GetByEmail(r.Context(), req.Email)
 	if err != nil {
 		slog.Error("Get user by email", slog.String("error", err.Error()))
 
-		err = WriteErrorResponse(w, http.StatusInternalServerError, "Get user by email error")
+		err = WriteErrorResponse(w, http.StatusInternalServerError, "Get user error")
 		if err != nil {
 			slog.Error("Write error response", slog.String("error", err.Error()))
 		}
@@ -116,21 +107,111 @@ func (c *UserController) GetByEmail(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
-	err = json.NewEncoder(w).Encode(GetByEmailResponse{
-		User: User{
-			ID:         user.ID,
-			Email:      user.Email,
-			FullName:   user.FullName,
-			CreateTime: user.CreateTime,
-		},
+	err = json.NewEncoder(w).Encode(UserResponse{
+		ID:         user.ID,
+		Email:      user.Email,
+		FullName:   user.FullName,
+		CreateTime: user.CreateTime.String(),
+		Street:     user.Street,
+		Zip:        user.Zip,
+		Country:    user.Country,
+		City:       user.City,
 	})
 	if err != nil {
-		slog.Error("Write get user by email response", slog.String("error", err.Error()))
+		slog.Error("Write get user response", slog.String("error", err.Error()))
 	}
 }
 
+func (c *UserController) ListUserByEmail(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	req, err := DecodeRequest[ListUserByEmailsRequest](r)
+	if err != nil {
+		slog.Error("Decode list user request", slog.String("error", err.Error()))
+
+		err = WriteErrorResponse(w, http.StatusBadRequest, "Invalid request body: %s", err)
+		if err != nil {
+			slog.Error("Write error response", slog.String("error", err.Error()))
+		}
+
+		return
+	}
+
+	users, err := c.userStore.ListUsersByEmail(r.Context(), req.Emails)
+	if err != nil {
+		slog.Error("List user by email", slog.String("error", err.Error()))
+
+		err = WriteErrorResponse(w, http.StatusInternalServerError, "Get user error")
+		if err != nil {
+			slog.Error("Write error response", slog.String("error", err.Error()))
+		}
+
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	usersRespons := make([]UserResponse, len(users))
+
+	for _, u := range users {
+		usersRespons = append(usersRespons, UserResponse{
+			ID:         u.ID,
+			Email:      u.Email,
+			FullName:   u.FullName,
+			CreateTime: u.CreateTime.String(),
+			Street:     u.Street,
+			Zip:        u.Zip,
+			Country:    u.Country,
+			City:       u.City,
+		})
+	}
+
+	err = json.NewEncoder(w).Encode(ListUserResponse{
+		Result: usersRespons,
+	})
+	if err != nil {
+		slog.Error("Write list user response", slog.String("error", err.Error()))
+	}
+}
+
+func (c *UserController) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	req, err := DecodeRequest[UpdateUserRequest](r)
+	if err != nil {
+		slog.Error("Decode update user request", slog.String("error", err.Error()))
+
+		err = WriteErrorResponse(w, http.StatusBadRequest, "Invalid request body: %s", err)
+		if err != nil {
+			slog.Error("Write error response", slog.String("error", err.Error()))
+		}
+
+		return
+	}
+
+	err = c.userStore.UpdateUser(r.Context(), domain.User{
+		ID:       req.ID,
+		Email:    req.Email,
+		FullName: req.FullName,
+		Country:  req.Country,
+		City:     req.City,
+		Street:   req.Street,
+		Zip:      req.Zip,
+	})
+	if err != nil {
+		slog.Error("update user", slog.String("error", err.Error()))
+
+		err = WriteErrorResponse(w, http.StatusInternalServerError, "update user error")
+		if err != nil {
+			slog.Error("Write error response", slog.String("error", err.Error()))
+		}
+
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (c *UserController) Register(mux *http.ServeMux) {
-	// TODO: Show different ways to design API (REST, RPC).
 	mux.HandleFunc("POST /v1/users", c.CreateUser)
-	mux.HandleFunc("GET /v1/users/{email}", c.GetByEmail)
+	mux.HandleFunc("POST /v1/users/getOne", c.UserByEmail)
+	mux.HandleFunc("POST /v1/users/list", c.ListUserByEmail)
+	mux.HandleFunc("PUT /v1/users", c.UpdateUser)
 }
