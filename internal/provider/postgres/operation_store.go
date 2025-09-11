@@ -75,14 +75,13 @@ func (s *OperationStore) GetUserBalance(ctx context.Context, userID int64) (deci
 
 	row = tx.QueryRow(ctx, getBalanceByUserIdQuery, userID, snapshot.SequenceNumber)
 
-	var b float64
+	var balance decimal.Decimal
 
-	if err = row.Scan(&b); err != nil {
+	if err = row.Scan(&balance); err != nil {
 		return decimal.Zero, err
 	}
 
-	balance := decimal.NewFromFloat(b)
-	balanceFromSnapshot := decimal.NewFromFloat(snapshot.Balance)
+	balanceFromSnapshot := snapshot.Balance
 	balance = balance.Add(balanceFromSnapshot)
 
 	return balance, nil
