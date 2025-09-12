@@ -23,6 +23,8 @@ var (
 	getBalanceSnapshotByUserIdQuery string
 	//go:embed queries/get_max_sequence_number_by_user_id.sql
 	getMaxSequenceNumberByUserId string
+
+	retryCount = 3
 )
 
 type OperationStore struct {
@@ -52,32 +54,19 @@ func (s *OperationStore) ListOperationsByUserID(ctx context.Context, userID int6
 }
 
 func (s *OperationStore) GetUserBalance(ctx context.Context, userID int64) (decimal.Decimal, error) {
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return decimal.Zero, err
-	}
-
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback(ctx) //TODO Обсудить, как принято обрабатывать в таких местах
-			return
-		}
-		_ = tx.Commit(ctx)
-	}()
-
-	row := tx.QueryRow(ctx, getBalanceSnapshotByUserIdQuery, userID)
+	row := s.db.QueryRow(ctx, getBalanceSnapshotByUserIdQuery, userID)
 
 	var snapshot domain.BalanceSnapshot
 
-	if err = row.Scan(&snapshot.ID, &snapshot.UserID, &snapshot.SequenceNumber, &snapshot.Balance); err != nil {
+	if err := row.Scan(&snapshot.ID, &snapshot.UserID, &snapshot.SequenceNumber, &snapshot.Balance); err != nil {
 		return decimal.Zero, err
 	}
 
-	row = tx.QueryRow(ctx, getBalanceByUserIdQuery, userID, snapshot.SequenceNumber)
+	row = s.db.QueryRow(ctx, getBalanceByUserIdQuery, userID, snapshot.SequenceNumber)
 
 	var balance decimal.Decimal
 
-	if err = row.Scan(&balance); err != nil {
+	if err := row.Scan(&balance); err != nil {
 		return decimal.Zero, err
 	}
 
@@ -87,12 +76,24 @@ func (s *OperationStore) GetUserBalance(ctx context.Context, userID int64) (deci
 	return balance, nil
 }
 
-func (s *OperationStore) CreateTransfer(
+func (s *OperationStore) CreateTransfer(ctx context.Context,
+	sourceUserID int64,
+	targetUserID int64,
+	amount decimal.Decimal) (id uuid.UUID, err error) {
+	err = retry(retryCount, func() error {
+		id, err = s.createTransferInner(ctx, sourceUserID, targetUserID, amount)
+		return err
+	})
+
+	return id, err
+}
+
+func (s *OperationStore) createTransferInner(
 	ctx context.Context,
 	sourceUserID int64,
 	targetUserID int64,
 	amount decimal.Decimal,
-) (uuid.UUID, error) {
+) (id uuid.UUID, err error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return uuid.Nil, err
@@ -103,7 +104,7 @@ func (s *OperationStore) CreateTransfer(
 			_ = tx.Rollback(ctx)
 			return
 		}
-		_ = tx.Commit(ctx)
+		err = tx.Commit(ctx)
 	}()
 
 	row := tx.QueryRow(ctx, getMaxSequenceNumberByUserId, sourceUserID)
@@ -132,5 +133,17 @@ func (s *OperationStore) CreateTransfer(
 		return uuid.Nil, err
 	}
 
-	return uuid.Nil, nil // Не понял, чей UUID возвращать
+	return uuid.Nil, err // Не понял, чей UUID возвращать
+}
+
+func retry(count int, targetFn func() error) error {
+	var err error
+	for i := 0; i < count; i++ {
+		err := targetFn()
+		if err == nil {
+			return nil
+		}
+	}
+
+	return err
 }

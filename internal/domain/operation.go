@@ -24,9 +24,9 @@ const (
 )
 
 type BalanceSnapshot struct {
-	ID             int64
-	UserID         int64
-	SequenceNumber int64
-	Balance        decimal.Decimal
-	UpdateTime     time.Time
+	ID             int64           `db:"id"`
+	UserID         int64           `db:"user_id"`
+	SequenceNumber int64           `db:"sequence_number"`
+	Balance        decimal.Decimal `db:"balance"`
+	UpdateTime     time.Time       `db:"update_time"`
 }
